@@ -1,5 +1,7 @@
 from flask import Flask, flash, request, redirect, url_for, render_template,jsonify
 import urllib.request
+import requests
+import json
 import os
 from werkzeug.utils import secure_filename
 import pickle
@@ -53,19 +55,23 @@ def upload_image():
 @app.route('/display/<filename>')
 def display_image(filename):
     prediction_of_model = makePredictions(model,os.path.join('static/uploads/',filename),classes)
-    # print('display_image filename: ' + filename)
-    # carbohydrates, proteins, fats, vitamins, minerals, calories = ibda.predict(url_for('static', filename='uploads/' + filename))
-    # Nutrients = {
-    #     "Carbohydrates": carbohydrates,
-    #     "Proteins": proteins,
-    #     "Fats": fats,
-    #     "Vitamins": vitamins,
-    #     "Minerals": minerals,
-    #     "Calories": calories
-    # }
-    # return redirect(url_for('static', filename='uploads/' + filename), code=301)
-    # return jsonify(Nutrients)
-    return prediction_of_model
+    url = 'https://api.nal.usda.gov/fdc/v1/foods/search'
+    parameters = {
+        'query':filename[:-4],
+        'api_key':'7BPKqVCgXpo0fJbU9SzcUXDketRPN7q1FPAJzord',
+        'format':'abridged',
+        'nutrients':[203,204,205,206]
+    }
+    response_food_header = requests.get(url=url,params=parameters)
+    output = response_food_header.json()
+    #print(output)
+    list1 = {}
+
+    for x in output["foods"][0]["foodNutrients"]:
+        if(x["value"]!=0):
+            list1[x["nutrientName"]] = {"value":x["value"],"unit":x["unitName"]}
+    return jsonify(list1)
+
  
 if __name__ == "__main__":
     app.run(debug=True)
